@@ -60,6 +60,7 @@ func Crawl(starturl string) {
         body := getBody(current_url)
         parseRobots(current_url)
         extractLinks(current_url, body)
+
         break
     }
 }
@@ -94,7 +95,15 @@ func extractLinks(url, body string) {
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
                 fmt.Println(nexturl)
-                priorityqueue.Push(&Item{value:nexturl, priority:1})
+
+                var priority = 0
+                // Maybe there's a false assumption here on where the anchor text is...
+                var anchorText = strings.ToLower(n.FirstChild.Data)
+                if strings.Contains(anchorText, topic) {
+                    fmt.Println("Found topic in link anchor text", n.FirstChild.Data)
+                    priority = 1
+                }
+                priorityqueue.Push(&Item{value:nexturl, priority:priority})
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -115,7 +124,7 @@ func main(){
             url = os.Args[1]
         case 5:
             url = os.Args[1]
-            topic = os.Args[2]
+            topic = strings.ToLower(os.Args[2])
             querywords = strings.Fields(os.Args[3])
 
             var err error
