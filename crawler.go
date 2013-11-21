@@ -3,14 +3,17 @@ package main
 import (
     "fmt"
     "os"
-    "strings"
     "io/ioutil"
     "net/http"
+    "strings"
+    "strconv"
     "code.google.com/p/go.net/html"
 )
 
-var priorityqueue =  []string{}
-var url, topic, querywords, N = "", "", "", ""
+var priorityqueue = PriorityQueue{}
+var url, topic = "", ""
+var N = 500
+var querywords []string
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
@@ -98,6 +101,10 @@ func extractLinks(url, body string) {
     f(doc)
 }
 
+func printusage() {
+    fmt.Fprintf(os.Stderr, "Usage: %s <URL> <TOPIC> <QUERYWORDS> <N>\n",  os.Args[0])
+}
+
 
 func main(){
     switch len(os.Args) {
@@ -106,12 +113,18 @@ func main(){
         case 5:
             url = os.Args[1]
             topic = os.Args[2]
-            // TODO: querywords can be more than one word ...
-            querywords = os.Args[3]
-            N = os.Args[4]
+            querywords = strings.Fields(os.Args[3])
+
+            var err error
+            N, err = strconv.Atoi(os.Args[4])
+            if err != nil {
+                printusage()
+                return
+            }
+
             fmt.Println(url, topic, querywords, N)
         default:
-            fmt.Fprintf(os.Stderr, "Usage: %s <URL> <TOPIC> <QUERYWORDS> <N>\n",  os.Args[0])
+            printusage()
             return
     }
     fmt.Println("--------------------------------------------------------")
