@@ -79,6 +79,9 @@ func AppendString(slice []string, data ...string) []string {
 }
 
 
+
+// TODO: add querywords as an argument
+//       and only add to pq if queruwords is found in the body
 func extractLinks(url, body string) {
     doc, err := html.Parse(strings.NewReader(body))
     if err != nil {
@@ -94,7 +97,7 @@ func extractLinks(url, body string) {
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
                 fmt.Println(nexturl)
-                priorityqueue.Push(&Item{value:nexturl, priority:1})
+                priorityqueue.Push(&Item{value:nexturl, priority:1}) // when do we use priority 0?
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -138,6 +141,5 @@ func main(){
     fmt.Println("--------------------------------------------------------")
     // Get the page
     Crawl(url)
-    fmt.Println(priorityqueue)
 }
 
