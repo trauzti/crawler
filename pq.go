@@ -10,7 +10,7 @@ package main
 
 import (
     "container/heap"
-    "fmt"
+    //"fmt"
 )
 
 // An Item is something we manage in a priority queue.
@@ -61,6 +61,7 @@ func (pq *PriorityQueue) update(item *Item, value string, priority int) {
     heap.Push(pq, item)
 }
 
+/*
 // This example inserts some items into a PriorityQueue, manipulates an item,
 // and then removes the items in priority order.
 func main() {
@@ -95,3 +96,4 @@ func main() {
     }
 }
 
+*/

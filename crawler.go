@@ -8,6 +8,7 @@ import (
     "strings"
     "strconv"
     "code.google.com/p/go.net/html"
+    "container/heap"
 )
 
 var priorityqueue = PriorityQueue{}
@@ -50,10 +51,12 @@ func getBody(url string) string {
 }
 
 func Crawl(starturl string) {
-    priorityqueue = append(priorityqueue, starturl)
-    for i := 0; i < len(priorityqueue); i++ {
-        // is it ok to dynamically add to the slice?
-        current_url := priorityqueue[i]
+    heap.Init(&priorityqueue)
+    priorityqueue.Push(&Item{value:starturl, priority:1})
+
+    for priorityqueue.Len() > 0 {
+        current_url := priorityqueue.Pop().(*Item).value
+
         body := getBody(current_url)
         parseRobots(current_url)
         extractLinks(current_url, body)
@@ -91,7 +94,7 @@ func extractLinks(url, body string) {
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
                 fmt.Println(nexturl)
-                priorityqueue = append(priorityqueue, nexturl)
+                priorityqueue.Push(&Item{value:nexturl, priority:1})
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
