@@ -11,10 +11,11 @@ import (
     "container/heap"
 )
 
-var priorityqueue = PriorityQueue{}
+var frontier = PriorityQueue{}
 var url, topic = "", ""
 var maxCrawl = 500
 var querywords []string
+var visitedUrls = make(map[string]bool)
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
@@ -79,12 +80,13 @@ func getBody(url string) string {
 }
 
 func Crawl(starturl string) {
-    heap.Init(&priorityqueue)
-    heap.Push(&priorityqueue, &Item{value:starturl, priority:1})
+    heap.Init(&frontier)
+    heap.Push(&frontier, &Item{value:starturl, priority:1})
 
     n := 0
-    for ; priorityqueue.Len() > 0 && n < maxCrawl; n++ {
-        current_url := heap.Pop(&priorityqueue).(*Item).value
+    for ; frontier.Len() > 0 && n < maxCrawl; n++ {
+        current_item := heap.Pop(&frontier).(*Item)
+        current_url := current_item.value
 
         fmt.Println("Visiting ", current_url)
 
@@ -111,7 +113,20 @@ func AppendString(slice []string, data ...string) []string {
     return slice
 }
 
-
+// Add an url to the frontier if it hasn't been visited before.
+// Give decreasing priority to new links which are not topical
+// to enforce a breadth first search.
+var orderPriority = 0
+func addToFrontier(url string, priority int) {
+    if _, in := visitedUrls[url]; !in {
+        if priority == 0 {
+            orderPriority -= 1
+            priority = orderPriority
+        }
+        heap.Push(&frontier, &Item{value:url, priority:priority})
+        visitedUrls[url] = true
+    }
+}
 
 // TODO: add querywords as an argument
 //       and only add to pq if queruwords is found in the body
@@ -149,7 +164,7 @@ func extractLinks(url, body string) {
                         priority = 1
                     }
                 }
-                heap.Push(&priorityqueue, &Item{value:nexturl, priority:priority})
+                addToFrontier(nexturl, priority)
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
