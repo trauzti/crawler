@@ -106,16 +106,16 @@ func extractLinks(url, body string) {
                 nexturl = canonicalizeUrl(nexturl)
                 fmt.Println(nexturl)
 
+                var priority = 0 // we use priority 0 if the anchor text isn't found in the page
                 if n.FirstChild != nil {
-                    var priority = 0 // we use priority 0 if the anchor text isn't found in the page 
                     // Maybe there's a false assumption here on where the anchor text is...
                     var anchorText = strings.ToLower(n.FirstChild.Data)
                     if strings.Contains(anchorText, topic) {
                         fmt.Println("Found topic in link anchor text", n.FirstChild.Data)
                         priority = 1
                     }
-                    heap.Push(&priorityqueue, &Item{value:nexturl, priority:priority})
                 }
+                heap.Push(&priorityqueue, &Item{value:nexturl, priority:priority})
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
