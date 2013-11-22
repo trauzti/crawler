@@ -20,7 +20,10 @@ func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
         return rest
     }
-    return base + "/" + rest
+    if rest[:1] != "/" {
+        rest = "/" + rest
+    }
+    return base + rest
 }
 
 func canonicalizeUrl(url string) string {
