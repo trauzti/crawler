@@ -40,7 +40,7 @@ func makeAbsoluteUrl(base, rest string) string {
         return rest
     }
     base = extractBasePath(base)
-    if rest[:1] != "/" {
+    if len(rest) > 0 && rest[:1] != "/" {
         rest = "/" + rest
     }
     return base + rest
@@ -71,7 +71,6 @@ func extractBasePath(_url string) string {
 // Does: remove port 80, querystrings (like mbl.is/?yeah) and www. from the beginning
 // TODO: 
 //     1) remove . and .. loops from the end
-//     2) Add trailing /
 func canonicalizeUrl(_url string) string {
     x, err := url.Parse(_url)
     if err != nil {
@@ -86,9 +85,6 @@ func canonicalizeUrl(_url string) string {
         res = "http://" + host[4:] + path
     } else {
         res = "http://" + host + path
-    }
-    if res[len(res)-1:] != "/" {
-        res = res + "/"
     }
     return res
 }
@@ -166,6 +162,12 @@ func testRobots(url string) bool {
 
 func getBody(_url string) string {
     resp, err := http.Get(_url)
+    if resp.StatusCode != 200 {
+        if print_info {
+            fmt.Printf("Got statuscode %d from %s. Skipping it\n", resp.StatusCode, _url)
+        }
+        return ""
+    }
     if err != nil {
         fmt.Println("http.Get", err)
     }
@@ -194,7 +196,9 @@ func Crawl(starturl string)(pagesCrawled int) {
         currentUrl := currentItem.value
 
         if !testRobots(currentUrl) {
-            fmt.Println("Url disallowed by robots.txt:", currentUrl)
+            if print_info {
+                fmt.Println("Url disallowed by robots.txt:", currentUrl)
+            }
             continue
         }
 
@@ -211,12 +215,16 @@ func Crawl(starturl string)(pagesCrawled int) {
 
     return
 }
+
+
 func handleUrl(currentUrl string) {
     body := getBody(currentUrl)
-    extractLinks(currentUrl, body)
-    if findQuery(body) {
-        fmt.Println("Query found in page:", currentUrl)
-        atomic.AddInt64(&foundCount, 1)
+    if body != "" {
+        extractLinks(currentUrl, body)
+        if findQuery(body) {
+            fmt.Println("Query found in page:", currentUrl)
+            atomic.AddInt64(&foundCount, 1)
+        }
     }
     wg.Done()
 }
@@ -239,6 +247,9 @@ var orderPriority = 0
 func addToFrontier(_url string, priority int) {
     frontier.Lock()
     if _, in := visitedUrls[_url]; !in {
+        if print_info {
+            fmt.Println("adding to pq:", _url) 
+        }
         orderPriority -= 1
         heap.Push(&frontier.pq, &Item{value:_url, priority:priority, secondaryPriority:orderPriority})
         visitedUrls[_url] = true
@@ -247,6 +258,7 @@ func addToFrontier(_url string, priority int) {
     frontier.Unlock()
 }
 
+var mediafilenamemap = make(map[string] bool)
 func extractLinks(_url, body string) {
     doc, err := html.Parse(strings.NewReader(body))
     if err != nil {
@@ -266,6 +278,17 @@ func extractLinks(_url, body string) {
                 // XXX: Do we want to ignore https? Should we fetch these pages anyway?
                 if !isAcceptableProtocol(nexturl) {
                     continue
+                }
+
+                sp := strings.Split(nexturl, ".")
+                if len(sp) > 1 {
+                    filetype := strings.ToLower(sp[len(sp)-1])
+                    if _, exists := mediafilenamemap[filetype]; exists {
+                        if print_info {
+                            fmt.Println("Skipping prohibited filetype:", filetype)
+                        }
+                        continue
+                    }
                 }
                 nexturl = makeAbsoluteUrl(_url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
@@ -297,6 +320,10 @@ func printusage() {
 
 
 func Docrawl(){
+    var mediafilenames = []string{"png","jpg","jpeg","css","js","avi","mpg","mp4","mpeg","mov"}
+    for _, n := range mediafilenames {
+        mediafilenamemap[n] = true
+    }
     frontier.pq = PriorityQueue{}
     heap.Init(&frontier.pq)
 
@@ -332,8 +359,6 @@ func Docrawl(){
     // Do the work!
     pagesCrawled := Crawl(URL)
 
-    fmt.Println("Waiting for all threads to terminate")
-
     wg.Wait()
 
     fmt.Println("--------------------------------------------------------")
@@ -342,3 +367,4 @@ func Docrawl(){
     fmt.Printf("Total distinctive urls found: %d\n", totalUrlsFound)
     fmt.Println("--------------------------------------------------------")
 }
+

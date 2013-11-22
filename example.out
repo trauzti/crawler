@@ -1,0 +1,37 @@
+--------------------------------------------------------
+Starting crawl, seed: http://mbl.is
+Topic: golf
+Query string: birgir leifur
+Maximum number of pages to visit: 500
+--------------------------------------------------------
+Query found in page: http://mbl.is
+Query found in page: http://mbl.is/sport/golf/
+Query found in page: http://mbl.is/
+Query found in page: http://mbl.is/frettir/
+Query found in page: http://mbl.is/sport/
+Query found in page: http://mbl.is/.
+Query found in page: http://mbl.is/frettir/vinsaelast/
+Query found in page: http://mbl.is/frettir/nyjast/
+Query found in page: http://mbl.is/sport/golf/2013/11/22/birgir_leifur_thremur_undir_fyrir_lokahringinn/
+Query found in page: http://mbl.is/feeds/golf/
+Query found in page: http://mbl.is/mm/frettir/
+Query found in page: http://mbl.is/mm/frettir/veftre.html
+Query found in page: http://mbl.is/sport/golf/2013/11/21/birgir_leifur_a_einu_hoggi_yfir_pari/
+Query found in page: http://mbl.is/sport/golf/2013/11/06/hoggi_fra_ad_komast_afram/
+Query found in page: http://mbl.is/sport/golf/2013/11/06/vissa_hja_birgi_leifi/
+Query found in page: http://mbl.is/sport/golf/2013/11/05/frestad_hja_birgi_leifi_sem_a_eina_holu_eftir/
+Query found in page: http://mbl.is/sport/golf/2013/11/04/birgir_leifur_lek_a_einu_undir_pari/
+Query found in page: http://mbl.is/sport/golf/2013/11/03/birgir_leifur_tharf_ad_leika_betur/
+Query found in page: http://mbl.is/sport/golf/2013/10/25/birgir_leifur_komst_afram/
+Query found in page: http://mbl.is/sport/golf/2013/10/25/birgir_leifur_a_tveimur_yfir_eftir_thrja_hringi/
+Query found in page: http://mbl.is/sport/golf/2013/10/24/birgir_leifur_a_pari_eftir_tvo_hringi/
+Query found in page: http://mbl.is/sport/golf/2013/10/22/birgir_leifur_lek_a_hoggi_undir_pari/
+Query found in page: http://mbl.is/sport/golf/2013/09/25/birgir_leifur_i_urtokumot_fyrir_pga/
+Query found in page: http://mbl.is/sport/golf/2013/09/20/birgir_leifur_komst_afram/
+Query found in page: http://mbl.is/sport/golf/2013/09/19/birgir_og_thordur_i_hardri_barattu/
+Query found in page: http://mbl.is/sport/golf/2013/09/18/birgir_og_thordur_eru_fjorum_undir_i_thyskalandi/
+--------------------------------------------------------
+Search complete. 500 pages crawled
+Search query "birgir leifur" found in 26 pages
+Total distinctive urls found: 6733
+--------------------------------------------------------

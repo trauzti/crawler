@@ -3,5 +3,5 @@
 [done] Add waittime between fetches
 [done] Multithreadify
 
-Better canonicalizing?
-Better query word search?
+[done] Better canonicalizing?
+[cancelled] Better query word search?
