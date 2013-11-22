@@ -26,6 +26,12 @@ func makeAbsoluteUrl(base, rest string) string {
     return base + rest
 }
 
+// Returns true iff the url is for an acceptable protocol or
+// it is a relative url.
+func isAcceptableProtocol(url string) bool {
+    return !(strings.Contains(url, ":") && url[:5] != "http:")
+}
+
 func canonicalizeUrl(url string) string {
     // TODO: writeme
     return url
@@ -102,6 +108,11 @@ func extractLinks(url, body string) {
                     break
                 }
                 nexturl := n.Attr[i].Val
+                // Ignore other protocol links, eg mailto, ftp or https
+                // XXX: Do we want to ignore https? Should we fetch these pages anyway?
+                if !isAcceptableProtocol(nexturl) {
+                    break
+                }
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
                 fmt.Println(nexturl)
