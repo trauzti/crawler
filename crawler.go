@@ -13,13 +13,14 @@ import (
 
 var priorityqueue = PriorityQueue{}
 var url, topic = "", ""
-var N = 500
+var maxCrawl = 500
 var querywords []string
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
         return rest
     }
+    base = extractBasePath(base)
     if rest[:1] != "/" {
         rest = "/" + rest
     }
@@ -30,6 +31,24 @@ func makeAbsoluteUrl(base, rest string) string {
 // it is a relative url.
 func isAcceptableProtocol(url string) bool {
     return !(strings.Contains(url, ":") && url[:5] != "http:")
+}
+
+func extractBasePath(url string) string {
+    count := 0
+    findThirdSlash := func(c rune) bool {
+        if c == '/' {
+            count += 1
+            return count == 3
+        }
+        return false
+    }
+
+    i := strings.IndexFunc(url, findThirdSlash)
+    if i > 0 {
+        return url[:i]
+    }
+
+    return url
 }
 
 func canonicalizeUrl(url string) string {
@@ -63,15 +82,19 @@ func Crawl(starturl string) {
     heap.Init(&priorityqueue)
     heap.Push(&priorityqueue, &Item{value:starturl, priority:1})
 
-    for priorityqueue.Len() > 0 {
+    n := 0
+    for ; priorityqueue.Len() > 0 && n < maxCrawl; n++ {
         current_url := heap.Pop(&priorityqueue).(*Item).value
+
+        fmt.Println("Visiting ", current_url)
 
         body := getBody(current_url)
         parseRobots(current_url)
         extractLinks(current_url, body)
 
-        break
     }
+
+    fmt.Printf("Visited %d sites.", n)
 }
 
 func AppendString(slice []string, data ...string) []string {
@@ -98,7 +121,7 @@ func extractLinks(url, body string) {
         fmt.Println("html.Parse", err)
     }
     // TODO: check if querywords is actually found in this page =)
-    fmt.Println("Query found in page:", url)
+    //fmt.Println("Query found in page:", url)
     var f func(*html.Node)
     f = func(n *html.Node) {
         if n.Type == html.ElementNode && n.Data == "a" {
@@ -115,7 +138,7 @@ func extractLinks(url, body string) {
                 }
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
-                fmt.Println(nexturl)
+                //fmt.Println(nexturl)
 
                 var priority = 0 // we use priority 0 if the anchor text isn't found in the page
                 if n.FirstChild != nil {
@@ -151,13 +174,13 @@ func main(){
             querywords = strings.Fields(os.Args[3])
 
             var err error
-            N, err = strconv.Atoi(os.Args[4])
+            maxCrawl, err = strconv.Atoi(os.Args[4])
             if err != nil {
                 printusage()
                 return
             }
 
-            fmt.Println(url, topic, querywords, N)
+            fmt.Println(url, topic, querywords, maxCrawl)
         default:
             printusage()
             return
@@ -166,7 +189,7 @@ func main(){
     fmt.Println("Starting crawl, seed:", url)
     fmt.Println("Topic:", topic)
     fmt.Println("Query string:", querywords)
-    fmt.Println("Maximum number of pages to visit:", N)
+    fmt.Println("Maximum number of pages to visit:", maxCrawl)
     fmt.Println("--------------------------------------------------------")
     // Get the page
     Crawl(url)
