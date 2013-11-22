@@ -97,6 +97,10 @@ func extractLinks(url, body string) {
     f = func(n *html.Node) {
         if n.Type == html.ElementNode && n.Data == "a" {
             for i := 0; i < len(n.Attr) ; i++ {
+                // Some pages put more attributes in their <a> tags.
+                if n.Attr[i].Key != "href" {
+                    break
+                }
                 nexturl := n.Attr[i].Val
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
