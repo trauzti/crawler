@@ -11,11 +11,15 @@ import (
     "container/heap"
 )
 
+// Toggle extra output.
+var print_info = false
+
 var frontier = PriorityQueue{}
 var url, topic = "", ""
 var maxCrawl = 500
 var querywords []string
 var visitedUrls = make(map[string]bool)
+var totalUrlsFound = 0
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
@@ -81,22 +85,39 @@ func getBody(url string) string {
 
 func Crawl(starturl string) {
     heap.Init(&frontier)
-    heap.Push(&frontier, &Item{value:starturl, priority:1})
+    addToFrontier(starturl, 1)
 
+    foundCount := 0
     n := 0
     for ; frontier.Len() > 0 && n < maxCrawl; n++ {
-        current_item := heap.Pop(&frontier).(*Item)
-        current_url := current_item.value
+        currentUrl := heap.Pop(&frontier).(*Item).value
 
-        fmt.Println("Visiting ", current_url)
+        if print_info {
+            fmt.Println("Visiting ", currentUrl)
+        }
 
-        body := getBody(current_url)
-        parseRobots(current_url)
-        extractLinks(current_url, body)
-
+        body := getBody(currentUrl)
+        parseRobots(currentUrl)
+        extractLinks(currentUrl, body)
+        if findQuery(body) {
+            fmt.Println("Query found in page:", currentUrl)
+            foundCount += 1
+        }
     }
 
-    fmt.Printf("Visited %d sites.", n)
+    fmt.Printf("Search complete. %d pages crawled\n", n)
+    fmt.Printf("Search query \"%s\" found in %d pages\n", strings.Join(querywords, " "), foundCount)
+    fmt.Printf("Total distinctive urls found: %d\n", totalUrlsFound)
+}
+
+func findQuery(body string) bool {
+    // This is supposed to be a phrase query so the whole splitting
+    // thing doesn't make much sense...
+    wholeQuery := strings.Join(querywords, " ")
+    lowerQuery := strings.ToLower(wholeQuery)
+    lowerBody := strings.ToLower(body)
+
+    return strings.Contains(lowerBody, lowerQuery)
 }
 
 func AppendString(slice []string, data ...string) []string {
@@ -125,6 +146,7 @@ func addToFrontier(url string, priority int) {
         }
         heap.Push(&frontier, &Item{value:url, priority:priority})
         visitedUrls[url] = true
+        totalUrlsFound += 1
     }
 }
 
@@ -160,7 +182,9 @@ func extractLinks(url, body string) {
                     // Maybe there's a false assumption here on where the anchor text is...
                     var anchorText = strings.ToLower(n.FirstChild.Data)
                     if strings.Contains(anchorText, topic) {
-                        fmt.Println("Found topic in link anchor text", n.FirstChild.Data)
+                        if print_info {
+                            fmt.Println("Found topic in link anchor text", n.FirstChild.Data)
+                        }
                         priority = 1
                     }
                 }
