@@ -26,6 +26,8 @@ var URL, topic = "", ""
 var maxCrawl int
 var querywords []string
 var visitedUrls = make(map[string]bool)
+var robotsCache = make(map[string]string)
+var useragent = "wuddlypums"
 var totalUrlsFound = 0
 var wg sync.WaitGroup
 var foundCount int64 = 0
@@ -44,6 +46,14 @@ func makeAbsoluteUrl(base, rest string) string {
     return base + rest
 }
 
+func makeRelativeUrl(_url string) string {
+    x, err := url.Parse(_url)
+    if err != nil {
+        fmt.Println("url.Parse", err)
+    }
+    return x.Path
+}
+
 // Returns true iff the url is for an acceptable protocol or
 // it is a relative url.
 func isAcceptableProtocol(_url string) bool {
@@ -51,21 +61,11 @@ func isAcceptableProtocol(_url string) bool {
 }
 
 func extractBasePath(_url string) string {
-    count := 0
-    findThirdSlash := func(c rune) bool {
-        if c == '/' {
-            count += 1
-            return count == 3
-        }
-        return false
+    x, err := url.Parse(_url)
+    if err != nil {
+        fmt.Println("url.Parse", err)
     }
-
-    i := strings.IndexFunc(_url, findThirdSlash)
-    if i > 0 {
-        return _url[:i]
-    }
-
-    return _url
+    return "http://" + x.Host
 }
 
 // Does: remove port 80, querystrings (like mbl.is/?yeah) and www. from the beginning
@@ -93,8 +93,75 @@ func canonicalizeUrl(_url string) string {
     return res
 }
 
-func parseRobots(_url string) []string {
-    return []string{}
+// make sure r is lowercased!
+func isAllowed (r, _url, agent string) bool {
+    lines := strings.Split(r, "\n")
+
+    _url = makeRelativeUrl(_url)
+
+    var currentAgent = false
+    for _, line := range lines {
+
+        bits := strings.Split(line, ":")
+        if len(bits) < 2 {
+            continue
+        }
+
+        field := bits[0]
+        value := strings.TrimSpace(bits[1])
+
+
+        switch field {
+            case "user-agent":
+                if value == "*" || len(value) <= len(agent) && agent[len(value):] == value {
+                    currentAgent = true
+                } else {
+                    currentAgent = false
+                }
+            case "disallow":
+                if currentAgent && len(value) <= len(_url) && _url[:len(value)] == value {
+                    return false
+                }
+            default:
+        }
+
+    }
+    return true
+}
+
+func getRobots(_url string) string {
+    _url = extractBasePath(_url)
+
+    if robots, exists := robotsCache[_url]; exists {
+        return robots
+    }
+
+    robots := fetchRobots(_url)
+    robotsCache[_url] = robots
+    return robots
+}
+
+// url must be a base path
+func fetchRobots(url string) string {
+
+    resp, err := http.Get(url + "/robots.txt")
+    if err != nil {
+        fmt.Println("Error getting robots.txt for", url, ":", err)
+        return ""
+    }
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        fmt.Println("Error getting robots.txt for", url, ":", err)
+    }
+
+    return strings.ToLower(string(body))
+
+}
+
+func testRobots(url string) bool {
+    robots := getRobots(url)
+
+    return isAllowed(robots, url, useragent)
 }
 
 func getBody(_url string) string {
@@ -120,11 +187,16 @@ func Crawl(starturl string)(pagesCrawled int) {
     addToFrontier(starturl, 1)
 
     pagesCrawled = 0
-    for ; frontier.pq.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
+    for frontier.pq.Len() > 0 && pagesCrawled < maxCrawl{
         frontier.Lock()
         currentItem := heap.Pop(&frontier.pq).(*Item)
         frontier.Unlock()
         currentUrl := currentItem.value
+
+        if !testRobots(currentUrl) {
+            fmt.Println("Url disallowed by robots.txt:", currentUrl)
+            continue
+        }
 
         if print_info {
             fmt.Println("Visiting ", currentUrl)
@@ -134,13 +206,13 @@ func Crawl(starturl string)(pagesCrawled int) {
         wg.Add(1)
         go handleUrl(currentUrl) // go => runs in a different thread
         time.Sleep(politeness)
+        pagesCrawled += 1
     }
 
     return
 }
 func handleUrl(currentUrl string) {
     body := getBody(currentUrl)
-    parseRobots(currentUrl)
     extractLinks(currentUrl, body)
     if findQuery(body) {
         fmt.Println("Query found in page:", currentUrl)

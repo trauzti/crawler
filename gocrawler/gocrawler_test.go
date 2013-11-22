@@ -38,3 +38,12 @@ func TestMakeAbsoluteUrl(t *testing.T) {
         t.Error(add1, base, "vs.", result)
     }
 }
+
+func TestMakeRelativeUrl(t *testing.T) {
+    mbl := "http://mbl.is/mm/frettir"
+    rel := "/mm/frettir"
+    res := makeRelativeUrl(mbl)
+    if res != rel  {
+        t.Error(res, "vs.", rel)
+    }
+}
