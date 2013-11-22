@@ -143,13 +143,13 @@ func extractLinks(url, body string) {
             for i := 0; i < len(n.Attr) ; i++ {
                 // Some pages put more attributes in their <a> tags.
                 if n.Attr[i].Key != "href" {
-                    break
+                    continue
                 }
                 nexturl := n.Attr[i].Val
                 // Ignore other protocol links, eg mailto, ftp or https
                 // XXX: Do we want to ignore https? Should we fetch these pages anyway?
                 if !isAcceptableProtocol(nexturl) {
-                    break
+                    continue
                 }
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
