@@ -9,17 +9,27 @@ import (
     "strconv"
     "code.google.com/p/go.net/html"
     "container/heap"
+    "time"
+    "sync"
+    "sync/atomic"
 )
 
 // Toggle extra output.
 var print_info = false
 
-var frontier = PriorityQueue{}
+var frontier struct {
+    sync.Mutex
+    pq PriorityQueue
+}
 var url, topic = "", ""
 var maxCrawl int
 var querywords []string
 var visitedUrls = make(map[string]bool)
 var totalUrlsFound = 0
+var wg sync.WaitGroup
+var foundCount int64 = 0
+var politeness = 300 * time.Millisecond
+
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
@@ -86,14 +96,15 @@ func getBody(url string) string {
     return s
 }
 
-func Crawl(starturl string)(pagesCrawled int, foundCount int) {
-    heap.Init(&frontier)
+
+func Crawl(starturl string)(pagesCrawled int) {
     addToFrontier(starturl, 1)
 
-    foundCount = 0
     pagesCrawled = 0
-    for ; frontier.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
-        currentItem := heap.Pop(&frontier).(*Item)
+    for ; frontier.pq.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
+        frontier.Lock()
+        currentItem := heap.Pop(&frontier.pq).(*Item)
+        frontier.Unlock()
         currentUrl := currentItem.value
 
         if print_info {
@@ -101,18 +112,24 @@ func Crawl(starturl string)(pagesCrawled int, foundCount int) {
             fmt.Println("priority ", currentItem.priority)
             fmt.Println("secondaryPriority ", currentItem.secondaryPriority)
         }
-
-        body := getBody(currentUrl)
-        parseRobots(currentUrl)
-        extractLinks(currentUrl, body)
-        if findQuery(body) {
-            fmt.Println("Query found in page:", currentUrl)
-            foundCount += 1
-        }
+        wg.Add(1)
+        go handleUrl(currentUrl)
+        time.Sleep(politeness)
     }
 
     return
 }
+func handleUrl(currentUrl string) {
+    body := getBody(currentUrl)
+    parseRobots(currentUrl)
+    extractLinks(currentUrl, body)
+    if findQuery(body) {
+        fmt.Println("Query found in page:", currentUrl)
+        atomic.AddInt64(&foundCount, 1)
+    }
+    wg.Done()
+}
+
 
 func findQuery(body string) bool {
     // This is supposed to be a phrase query so the whole splitting
@@ -129,12 +146,14 @@ func findQuery(body string) bool {
 // to enforce a breadth first search.
 var orderPriority = 0
 func addToFrontier(url string, priority int) {
+    frontier.Lock()
     if _, in := visitedUrls[url]; !in {
         orderPriority -= 1
-        heap.Push(&frontier, &Item{value:url, priority:priority, secondaryPriority:orderPriority})
+        heap.Push(&frontier.pq, &Item{value:url, priority:priority, secondaryPriority:orderPriority})
         visitedUrls[url] = true
         totalUrlsFound += 1
     }
+    frontier.Unlock()
 }
 
 func extractLinks(url, body string) {
@@ -187,6 +206,9 @@ func printusage() {
 
 
 func main(){
+    frontier.pq = PriorityQueue{}
+    heap.Init(&frontier.pq)
+
     if len(os.Args) < 4 || len(os.Args) > 5 {
         printusage()
         return
@@ -217,7 +239,11 @@ func main(){
     fmt.Println("--------------------------------------------------------")
 
     // Do the work!
-    pagesCrawled, foundCount := Crawl(url)
+    pagesCrawled := Crawl(url)
+
+    fmt.Println("Waiting for all threads to terminate")
+
+    wg.Wait()
 
     fmt.Println("--------------------------------------------------------")
     fmt.Printf("Search complete. %d pages crawled\n", pagesCrawled)
@@ -225,4 +251,3 @@ func main(){
     fmt.Printf("Total distinctive urls found: %d\n", totalUrlsFound)
     fmt.Println("--------------------------------------------------------")
 }
-
