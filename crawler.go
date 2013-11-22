@@ -20,16 +20,23 @@ var maxCrawl int
 var querywords []string
 var visitedUrls = make(map[string]bool)
 var totalUrlsFound = 0
+var robotsCache = make(map[string]string)
+var useragent = "wuddlypums"
 
 func makeAbsoluteUrl(base, rest string) string {
     if len(rest) >= 7 && rest[:4+3] == "http://" {
         return rest
     }
     base = extractBasePath(base)
-    if rest[:1] != "/" {
+    if len(rest)>1 && rest[:1] != "/" {
         rest = "/" + rest
     }
     return base + rest
+}
+
+func makeRelativeUrl(url string) string {
+    base := extractBasePath(url)
+    return url[len(base):]
 }
 
 // Returns true iff the url is for an acceptable protocol or
@@ -37,6 +44,43 @@ func makeAbsoluteUrl(base, rest string) string {
 func isAcceptableProtocol(url string) bool {
     return !(strings.Contains(url, ":") && url[:5] != "http:")
 }
+
+// make sure r is lowercased!
+func isAllowed (r, url, agent string) bool {
+    lines := strings.Split(r, "\n")
+
+    url = makeRelativeUrl(url)
+
+    var currentAgent = false
+    for _, line := range lines {
+
+        bits := strings.Split(line, ":")
+        if len(bits) < 2 {
+            continue
+        }
+
+        field := bits[0]
+        value := strings.TrimSpace(bits[1])
+
+
+        switch field {
+            case "user-agent":
+                if value == "*" || len(value) <= len(agent) && agent[len(value):] == value {
+                    currentAgent = true
+                } else {
+                    currentAgent = false
+                }
+            case "disallow":
+                if currentAgent && len(value) <= len(url) && url[:len(value)] == value {
+                    return false
+                }
+            default:
+        }
+
+    }
+    return true
+}
+
 
 func extractBasePath(url string) string {
     count := 0
@@ -64,8 +108,39 @@ func canonicalizeUrl(url string) string {
     return url
 }
 
-func parseRobots(url string) []string {
-    return []string{}
+func getRobots(url string) string {
+    url = extractBasePath(url)
+
+    if robots, exists := robotsCache[url]; exists {
+        return robots
+    }
+
+    robots := fetchRobots(url)
+    robotsCache[url] = robots
+    return robots
+}
+
+// url must be a base path
+func fetchRobots(url string) string {
+
+    resp, err := http.Get(url + "/robots.txt")
+    if err != nil {
+        fmt.Println("Error getting robots.txt for", url, ":", err)
+        return ""
+    }
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        fmt.Println("Error getting robots.txt for", url, ":", err)
+    }
+
+    return strings.ToLower(string(body))
+
+}
+
+func testRobots(url string) bool {
+    robots := getRobots(url)
+
+    return isAllowed(robots, url, useragent)
 }
 
 func getBody(url string) string {
@@ -92,9 +167,14 @@ func Crawl(starturl string)(pagesCrawled int, foundCount int) {
 
     foundCount = 0
     pagesCrawled = 0
-    for ; frontier.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
+    for frontier.Len() > 0 && pagesCrawled < maxCrawl {
         currentItem := heap.Pop(&frontier).(*Item)
         currentUrl := currentItem.value
+
+        if !testRobots(currentUrl) {
+            fmt.Println("Url disallowed by robots.txt:", currentUrl)
+            continue
+        }
 
         if print_info {
             fmt.Println("Visiting ", currentUrl)
@@ -103,12 +183,13 @@ func Crawl(starturl string)(pagesCrawled int, foundCount int) {
         }
 
         body := getBody(currentUrl)
-        parseRobots(currentUrl)
         extractLinks(currentUrl, body)
         if findQuery(body) {
             fmt.Println("Query found in page:", currentUrl)
             foundCount += 1
         }
+
+        pagesCrawled += 1
     }
 
     return
