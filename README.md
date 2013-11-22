@@ -18,11 +18,15 @@ Trausti Saemundsson <trauzti@gmail.com>
 
 Build
 ==============
+```bash
 $ go build
+```
 
 Run
 ==============
+```bash
 $ ./crawler <URL> <TOPIC> <QUERYWORDS> [N]
+```
 
 Where N is the maximum number of pages to crawl
 Note that the querywords must be within quotation marks (see example.sh)
