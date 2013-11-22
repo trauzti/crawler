@@ -57,7 +57,10 @@ func extractBasePath(url string) string {
 }
 
 func canonicalizeUrl(url string) string {
-    // TODO: writeme
+    if i := strings.IndexAny(url, "?#"); i >= 0 {
+        return url[:i]
+    }
+
     return url
 }
 
