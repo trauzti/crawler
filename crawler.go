@@ -93,10 +93,13 @@ func Crawl(starturl string)(pagesCrawled int, foundCount int) {
     foundCount = 0
     pagesCrawled = 0
     for ; frontier.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
-        currentUrl := heap.Pop(&frontier).(*Item).value
+        currentItem := heap.Pop(&frontier).(*Item)
+        currentUrl := currentItem.value
 
         if print_info {
             fmt.Println("Visiting ", currentUrl)
+            fmt.Println("priority ", currentItem.priority)
+            fmt.Println("secondaryPriority ", currentItem.secondaryPriority)
         }
 
         body := getBody(currentUrl)
@@ -127,11 +130,8 @@ func findQuery(body string) bool {
 var orderPriority = 0
 func addToFrontier(url string, priority int) {
     if _, in := visitedUrls[url]; !in {
-        if priority == 0 {
-            orderPriority -= 1
-            priority = orderPriority
-        }
-        heap.Push(&frontier, &Item{value:url, priority:priority})
+        orderPriority -= 1
+        heap.Push(&frontier, &Item{value:url, priority:priority, secondaryPriority:orderPriority})
         visitedUrls[url] = true
         totalUrlsFound += 1
     }
