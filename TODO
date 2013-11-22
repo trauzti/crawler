@@ -1,7 +1,7 @@
 
-Respect robots.txt
-Add waittime between fetches
-Multithreadify
+[done] Respect robots.txt
+[done] Add waittime between fetches
+[done] Multithreadify
 
 Better canonicalizing?
 Better query word search?
