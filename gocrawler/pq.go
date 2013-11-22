@@ -6,7 +6,7 @@
 
 
 // This example demonstrates a priority queue built using the heap interface.
-package main
+package gocrawler
 
 import (
     "container/heap"
