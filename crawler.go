@@ -16,7 +16,7 @@ var print_info = false
 
 var frontier = PriorityQueue{}
 var url, topic = "", ""
-var maxCrawl = 500
+var maxCrawl int
 var querywords []string
 var visitedUrls = make(map[string]bool)
 var totalUrlsFound = 0
@@ -86,13 +86,13 @@ func getBody(url string) string {
     return s
 }
 
-func Crawl(starturl string) {
+func Crawl(starturl string)(pagesCrawled int, foundCount int) {
     heap.Init(&frontier)
     addToFrontier(starturl, 1)
 
-    foundCount := 0
-    n := 0
-    for ; frontier.Len() > 0 && n < maxCrawl; n++ {
+    foundCount = 0
+    pagesCrawled = 0
+    for ; frontier.Len() > 0 && pagesCrawled < maxCrawl; pagesCrawled++ {
         currentUrl := heap.Pop(&frontier).(*Item).value
 
         if print_info {
@@ -108,9 +108,7 @@ func Crawl(starturl string) {
         }
     }
 
-    fmt.Printf("Search complete. %d pages crawled\n", n)
-    fmt.Printf("Search query \"%s\" found in %d pages\n", strings.Join(querywords, " "), foundCount)
-    fmt.Printf("Total distinctive urls found: %d\n", totalUrlsFound)
+    return
 }
 
 func findQuery(body string) bool {
@@ -153,15 +151,12 @@ func addToFrontier(url string, priority int) {
     }
 }
 
-// TODO: add querywords as an argument
-//       and only add to pq if queruwords is found in the body
 func extractLinks(url, body string) {
     doc, err := html.Parse(strings.NewReader(body))
     if err != nil {
         fmt.Println("html.Parse", err)
     }
-    // TODO: check if querywords is actually found in this page =)
-    //fmt.Println("Query found in page:", url)
+
     var f func(*html.Node)
     f = func(n *html.Node) {
         if n.Type == html.ElementNode && n.Data == "a" {
@@ -178,7 +173,6 @@ func extractLinks(url, body string) {
                 }
                 nexturl = makeAbsoluteUrl(url, nexturl)
                 nexturl = canonicalizeUrl(nexturl)
-                //fmt.Println(nexturl)
 
                 var priority = 0 // we use priority 0 if the anchor text isn't found in the page
                 if n.FirstChild != nil {
@@ -202,38 +196,47 @@ func extractLinks(url, body string) {
 }
 
 func printusage() {
-    fmt.Fprintf(os.Stderr, "Usage: %s <URL> <TOPIC> <QUERYWORDS> <N>\n",  os.Args[0])
+    fmt.Fprintf(os.Stderr, "Usage: %s <URL> <TOPIC> <QUERYWORDS> [MAX_CRAWL]\n",  os.Args[0])
 }
 
 
 func main(){
-    switch len(os.Args) {
-        case 2:
-            url = os.Args[1]
-        case 5:
-            url = os.Args[1]
-            topic = strings.ToLower(os.Args[2])
-            querywords = strings.Fields(os.Args[3])
+    if len(os.Args) < 4 || len(os.Args) > 5 {
+        printusage()
+        return
+    }
 
-            var err error
-            maxCrawl, err = strconv.Atoi(os.Args[4])
-            if err != nil {
-                printusage()
-                return
-            }
+    url = os.Args[1]
+    topic = strings.ToLower(os.Args[2])
+    querywords = strings.Fields(os.Args[3])
 
-            fmt.Println(url, topic, querywords, maxCrawl)
-        default:
+    // Maximum number of pages to crawl is an optional param with default value.
+    if len(os.Args) == 5 {
+        var err error
+        if maxCrawl, err = strconv.Atoi(os.Args[4]); err != nil {
+
+        //if err != nil {
             printusage()
             return
+        }
+    } else {
+        maxCrawl = 500
     }
+
     fmt.Println("--------------------------------------------------------")
     fmt.Println("Starting crawl, seed:", url)
     fmt.Println("Topic:", topic)
-    fmt.Println("Query string:", querywords)
+    fmt.Println("Query string:", strings.Join(querywords, " "))
     fmt.Println("Maximum number of pages to visit:", maxCrawl)
     fmt.Println("--------------------------------------------------------")
-    // Get the page
-    Crawl(url)
+
+    // Do the work!
+    pagesCrawled, foundCount := Crawl(url)
+
+    fmt.Println("--------------------------------------------------------")
+    fmt.Printf("Search complete. %d pages crawled\n", pagesCrawled)
+    fmt.Printf("Search query \"%s\" found in %d pages\n", strings.Join(querywords, " "), foundCount)
+    fmt.Printf("Total distinctive urls found: %d\n", totalUrlsFound)
+    fmt.Println("--------------------------------------------------------")
 }
 
