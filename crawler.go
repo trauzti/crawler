@@ -52,10 +52,10 @@ func getBody(url string) string {
 
 func Crawl(starturl string) {
     heap.Init(&priorityqueue)
-    priorityqueue.Push(&Item{value:starturl, priority:1})
+    heap.Push(&priorityqueue, &Item{value:starturl, priority:1})
 
     for priorityqueue.Len() > 0 {
-        current_url := priorityqueue.Pop().(*Item).value
+        current_url := heap.Pop(&priorityqueue).(*Item).value
 
         body := getBody(current_url)
         parseRobots(current_url)
@@ -106,7 +106,7 @@ func extractLinks(url, body string) {
                     fmt.Println("Found topic in link anchor text", n.FirstChild.Data)
                     priority = 1
                 }
-                priorityqueue.Push(&Item{value:nexturl, priority:priority})
+                heap.Push(&priorityqueue, &Item{value:nexturl, priority:priority})
             }
         }
         for c := n.FirstChild; c != nil; c = c.NextSibling {
