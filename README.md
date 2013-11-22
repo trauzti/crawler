@@ -1,7 +1,9 @@
-=== wuddlypums ===
+wuddlypums
+==============
 An awesome web crawler written in Go
 
-=== Features ===
+Features
+==============
 1) Opens URLs in parrallel
 2) Canonicalizes URLs
 3) Visits URLs only once
@@ -9,14 +11,18 @@ An awesome web crawler written in Go
 5) Is very polite :) waits 300 milliseconds between HTTP GET requests
 6) Follows the rules from robots.txt
 
-=== Authors ===
+Authors
+==============
 Petur Orri Ragnarsson <peturor@gmail.com>
 Trausti Saemundsson <trauzti@gmail.com>
 
-=== Build ===
+Build
+==============
 $ go build
 
-=== Run ===
-./crawler <URL> <TOPIC> <QUERYWORDS> [N]
+Run
+==============
+$ ./crawler <URL> <TOPIC> <QUERYWORDS> [N]
+
 Where N is the maximum number of pages to crawl
 Note that the querywords must be within quotation marks (see example.sh)
