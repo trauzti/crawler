@@ -20,6 +20,7 @@ Trausti Saemundsson <trauzti@gmail.com>
 Build
 ==============
 ```bash
+$ go get github.com/trauzti/crawler/gocrawler
 $ go build
 ```
 
